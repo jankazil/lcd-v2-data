@@ -50,7 +50,17 @@ lcd_data = [
 [tool.ruff]
 line-length = 128
 target-version = "py313"
-extend-exclude = ["dist", "build"]
+extend-exclude = [
+    "dist",
+    "build",
+    "data",
+    "demos",
+    "docs",
+    "experiments",
+    "notebooks",
+    "plots",
+    "results",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
