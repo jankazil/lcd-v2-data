@@ -7,7 +7,7 @@ name = "lcd-data"
 version = "1.0.8"
 description = "Python toolkit for downloading and processing Local Climatological Data version 2 (LCDv2) data."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<=3.12.9"
 license = { file = "LICENSE" }
 authors = [{ name = "Jan Kazil" }]
 dependencies = [
