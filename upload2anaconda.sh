@@ -292,7 +292,7 @@ EOF
 # 3) Prepare a dedicated build environment
 #
 
-mamba create -y -n conda-build -c conda-forge python=${PYTHON_VERSION} conda-build anaconda-client
+mamba create -y -n conda-build -c conda-forge python=${PYTHON_VERSION} conda-build conda-verify anaconda-client
 conda activate conda-build
 conda build --version
 
