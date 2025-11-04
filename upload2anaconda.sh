@@ -287,7 +287,6 @@ outputs:
       license_file: LICENSE
 EOF
 
-
 #
 # 3) Prepare a dedicated build environment
 #
