@@ -689,6 +689,7 @@ class Stations:
             Such extreme values are indoubtedly non-representative, and may be caused,
             e.g., by aircraft exhaust. Still, non-representative values < 60 C
             may remain in the data.
+          - Sets station latitude, longitude, and elevation to values from station metadata
           - Removes duplicated times
           - Computes hourly relative humidity when both dry-bulb temperature
             and dew-point temperature are available. Values outside [0, 101]
@@ -735,6 +736,10 @@ class Stations:
         # Loop over the files, and read tand process the data
         #
 
+        print()
+        print('Reading data for station', station_id)
+        print()
+
         dfs = []
 
         for file_path in local_files:
@@ -775,43 +780,55 @@ class Stations:
 
                 tf = TimezoneFinder()
 
-                # Rows with valid coordinates
-                coord_mask = df['LATITUDE'].notna() & df['LONGITUDE'].notna()
+                # Use coordinates from meta data to determine the time zone
 
-                if coord_mask.any():
-                    # Use first valid coordinate pair to determine the time zone (only for offset reference)
+                station_mask = self.meta_data['ID'] == station_id
 
-                    lat0, lon0 = df.loc[coord_mask, ['LATITUDE', 'LONGITUDE']].iloc[0]
+                lat_meta, lon_meta, elev_meta = self.meta_data.loc[station_mask, ['LAT', 'LON', 'ELEV']].iloc[0]
+                station = self.meta_data.loc[station_mask, 'NAME'].iloc[0]
 
-                    tzname = tf.timezone_at(lat=float(lat0), lng=float(lon0))
-                    if tzname is None:
-                        raise ValueError("Could not determine timezone from the provided coordinates.")
+                tzname = tf.timezone_at(lat=float(lat_meta), lng=float(lon_meta))
+                if tzname is None:
+                    raise ValueError("Could not determine timezone from the provided coordinates.")
 
-                    print('(Time zone is ' + tzname + ')')
+                print(
+                    'STATION:',
+                    station,
+                    '  LAT =',
+                    lat_meta,
+                    '  LON =',
+                    lon_meta,
+                    '  ELEV =',
+                    elev_meta,
+                    '  TIME ZONE:',
+                    tzname,
+                    '  FILE:',
+                    file_path,
+                )
 
-                    tz = ZoneInfo(tzname)
+                tz = ZoneInfo(tzname)
 
-                    # Offset of Local Standard Time (without Daylight Saving Time) relative to UTC (utc_offset = LST - UTC)
-                    utc_offset = datetime(2025, 1, 1, 0, 0, tzinfo=tz).utcoffset()
-                    if utc_offset is None:
-                        raise ValueError(f"Could not obtain UTC offset for timezone: {tzname}")
+                # Offset of Local Standard Time (without Daylight Saving Time) relative to UTC (utc_offset = LST - UTC)
+                utc_offset = datetime(2025, 1, 1, 0, 0, tzinfo=tz).utcoffset()
+                if utc_offset is None:
+                    raise ValueError(f"Could not obtain UTC offset for timezone: {tzname}")
 
-                    offset_td = pd.to_timedelta(utc_offset)
+                offset_td = pd.to_timedelta(utc_offset)
 
-                    for ii in time_column_index:
-                        col_label = df.columns[ii]
+                for ii in time_column_index:
+                    col_label = df.columns[ii]
 
-                        # Work on a temporary datetime Series (naive LST)
-                        converted = pd.to_datetime(df[col_label], errors='coerce')
+                    # Work on a temporary datetime Series (naive LST)
+                    converted = pd.to_datetime(df[col_label], errors='coerce')
 
-                        # Only rows with coords AND a parsable timestamp
-                        mask = coord_mask & converted.notna()
+                    # Only rows with parsable timestamp
+                    mask = converted.notna()
 
-                        # Set time to UTC = LST - utc_offset, then localize to UTC
-                        utc_vals = (converted - offset_td).dt.tz_localize('UTC')
+                    # Set time to UTC = LST - utc_offset, then localize to UTC
+                    utc_vals = (converted - offset_td).dt.tz_localize('UTC')
 
-                        # Assign back only where valid; this keeps original values elsewhere
-                        df.loc[mask, col_label] = utc_vals[mask]
+                    # Assign back only where valid; this keeps original values elsewhere
+                    df.loc[mask, col_label] = utc_vals[mask]
 
                 # Convert columns that contain numbers to floating point values
 
@@ -917,6 +934,11 @@ class Stations:
                 for ii in column_index:
                     df.iloc[:, ii] = df.iloc[:, ii] + 18.3
 
+                # Set latitude, longitude, and elevation to values from metadata
+                df.iloc[:, 2] = lat_meta
+                df.iloc[:, 3] = lon_meta
+                df.iloc[:, 4] = elev_meta
+
                 dfs.append(df)
 
         df_output = pd.concat(dfs, ignore_index=True)
@@ -976,7 +998,7 @@ class Stations:
             # Info for user
 
             print()
-            print('Removing time duplicates:')
+            print('Removing duplicated times:')
             for ii in row_numbers_remove:
                 print(file_path, df_output.index[ii])
 
@@ -1405,12 +1427,6 @@ class Stations:
         var_names_lcd = ['HourlyDryBulbTemperature', 'HourlyDewPointTemperature', 'HourlyRelativeHumidity', 'HourlyWindSpeed']
         var_names = ['T', 'Td', 'RH', 'windspeed']
 
-        print()
-        print('Constructing full hourly time series for ' + region + ' of the observables')
-        print()
-        for var_name_lcd, var_name in zip(var_names_lcd, var_names, strict=False):
-            print(var_name_lcd, ' = ', var_name)
-
         ds_stations = []
 
         assert len(self.ids()) > 0, 'No stations in dataset. Aborting.'
@@ -1641,6 +1657,7 @@ class Stations:
         #
 
         if len(df) == 0:
+            print('No data for station ' + station_id + '. Skipping.')
             return None
 
         #
@@ -1648,6 +1665,7 @@ class Stations:
         #
 
         if df['LATITUDE'].isna().all() or df['LONGITUDE'].isna().all():
+            print('No valid latitude/longitude for station ' + station_id + '. Skipping.')
             return None
 
         #
@@ -1655,6 +1673,7 @@ class Stations:
         #
 
         if df[var_names_lcd].isna().all().all():
+            print('No valid data for the requested variables for station ' + station_id + '. Skipping.')
             return None
 
         # Convert to numpy array of numpy.datetime64 objects
