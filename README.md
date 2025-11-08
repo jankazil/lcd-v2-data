@@ -23,7 +23,7 @@ It provides:
 
 LCD v2 is provided by the [National Centers for Environmental Information (NCEI)](https://www.ncei.noaa.gov/).
 
-## Installation (Linux / macOS)
+## Installation
 
 ```bash
 mamba install -c jan.kazil -c conda-forge lcd-data
