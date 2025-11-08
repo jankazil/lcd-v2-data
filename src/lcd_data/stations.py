@@ -421,7 +421,7 @@ class Stations:
 
         # Get the URLs of all LCD data files on the NCEI web server:
 
-        all_file_urls = ncei.lcd_data_urls(self.ids(), start_time.year, end_time.year, n_jobs=n_jobs)
+        all_file_urls = ncei.lcd_data_urls(self.ids(), start_time.year, end_time.year, n_jobs=n_jobs, verbose=verbose)
 
         #
         # Construct a new dataframe
@@ -610,7 +610,7 @@ class Stations:
 
         return station_ids
 
-    def save_station_list(self, file_path: Path):
+    def save_station_list(self, file_path: Path, verbose: bool = False):
         '''
         Write the station list to a fixed-width file compatible with
         "ghcnh-station-list.txt".
@@ -645,17 +645,14 @@ class Stations:
 
                 f.write("".join(row_strs) + '\n')
 
-        print()
-        print('Created the stations metadata file', file_path)
+        if verbose:
+            print()
+            print('Created the stations metadata file', file_path)
 
         return
 
     def read_station_observations(
-        self,
-        data_dir: Path,
-        start_year: int,
-        end_year: int,
-        station_id: str,
+        self, data_dir: Path, start_year: int, end_year: int, station_id: str, verbose: bool = False
     ) -> tuple[pd.DataFrame, dict, dict]:
         '''
         Load Local Climatological Data (LCD) files for one station over an
@@ -706,6 +703,8 @@ class Stations:
                 Last year to include (inclusive).
             station_id (str):
                 GHCNh station identifier.
+            verbose : bool, optional
+                If True, print progress information to stdout. Defaults to False.
 
         Returns:
             pd.DataFrame:
@@ -736,9 +735,10 @@ class Stations:
         # Loop over the files, and read tand process the data
         #
 
-        print()
-        print('Reading data for station', station_id)
-        print()
+        if verbose:
+            print()
+            print('Reading data for station', station_id)
+            print()
 
         dfs = []
 
@@ -791,20 +791,21 @@ class Stations:
                 if tzname is None:
                     raise ValueError("Could not determine timezone from the provided coordinates.")
 
-                print(
-                    'STATION:',
-                    station,
-                    '  LAT =',
-                    lat_meta,
-                    '  LON =',
-                    lon_meta,
-                    '  ELEV =',
-                    elev_meta,
-                    '  TIME ZONE:',
-                    tzname,
-                    '  FILE:',
-                    file_path,
-                )
+                if verbose:
+                    print(
+                        'STATION:',
+                        station,
+                        '  LAT =',
+                        lat_meta,
+                        '  LON =',
+                        lon_meta,
+                        '  ELEV =',
+                        elev_meta,
+                        '  TIME ZONE:',
+                        tzname,
+                        '  FILE:',
+                        file_path,
+                    )
 
                 tz = ZoneInfo(tzname)
 
@@ -997,10 +998,11 @@ class Stations:
 
             # Info for user
 
-            print()
-            print('Removing duplicated times:')
-            for ii in row_numbers_remove:
-                print(file_path, df_output.index[ii])
+            if verbose:
+                print()
+                print('Removing duplicated times:')
+                for ii in row_numbers_remove:
+                    print(file_path, df_output.index[ii])
 
             # Convert row numbers to index labels and drop duplicated rows
 
@@ -1310,12 +1312,14 @@ class Stations:
 
         return df_output, long_names, units
 
-    def write_utc_hourly_netcdf(self, file_path: Path):
+    def write_utc_hourly_netcdf(self, file_path: Path, verbose: bool = False):
         '''
         Writes the xarray self.time_series_hourly into a netCDF file.
 
         Args:
             file_path (Path): Path to the netCDF file. The file will be overwritten if it exists.
+        verbose : bool, optional
+            If True, print progress information to stdout. Defaults to False.
         '''
 
         # Remove attribute/encoding conflicts with any units set previously on time-like variables
@@ -1350,9 +1354,10 @@ class Stations:
         else:
             self.time_series_hourly.to_netcdf(file_path, encoding=encoding)
 
-        print()
-        print('Created the full-hourly UTC time series file', file_path)
-        print()
+        if verbose:
+            print()
+            print('Created the full-hourly UTC time series file', file_path)
+            print()
 
         return
 
@@ -1364,6 +1369,7 @@ class Stations:
         region: str = 'unspecified',
         max_interpolation_interval_h: float = 2,
         plot_dir: Path = None,
+        verbose: bool = False,
     ) -> xr.Dataset:
         '''
         Build regular, full-hourly UTC time series for each station in "self.meta_data"
@@ -1393,6 +1399,8 @@ class Stations:
             Directory in which to save comparison plots produced by "interpolate_to_full_hour".
             If the directory does not exist, it will be created. If "None" (default), no plots
             are written. Generating plots can be slow for many stations and years.
+        verbose : bool, optional
+            If True, print progress information to stdout. Defaults to False.
 
         Returns
         -------
@@ -1444,6 +1452,7 @@ class Stations:
                 region=region,
                 max_interpolation_interval_h=max_interpolation_interval_h,
                 plot_dir=plot_dir,
+                verbose=verbose,
             )
 
             if ds is not None:
@@ -1475,6 +1484,7 @@ class Stations:
         region: str = 'unspecified',
         max_interpolation_interval_h: float = 2,
         plot_dir: Path = None,
+        verbose: bool = False,
     ) -> xr.Dataset | None:
         '''
         Interpolate one or more Local Climatological Data (LCD) observables to a regular hourly
@@ -1530,6 +1540,8 @@ class Stations:
             Directory in which to save time-series comparison plots. If the directory does not
             exist, it will be created. If "None" (default), no plots are written. Generating
             plots is comparatively slow for large datasets.
+        verbose : bool, optional
+            If True, print progress information to stdout. Defaults to False.
 
         Returns
         -------
@@ -1588,7 +1600,7 @@ class Stations:
         # Read the LCD data
         #
 
-        df, long_names, units = self.read_station_observations(data_dir, start_year, end_year, station_id)
+        df, long_names, units = self.read_station_observations(data_dir, start_year, end_year, station_id, verbose=verbose)
 
         local_files = ncei.lcd_data_file_paths(start_year, end_year, [station_id], data_dir)
 
@@ -1657,7 +1669,8 @@ class Stations:
         #
 
         if len(df) == 0:
-            print('No data for station ' + station_id + '. Skipping.')
+            if verbose:
+                print('No data for station ' + station_id + '. Skipping.')
             return None
 
         #
@@ -1665,7 +1678,8 @@ class Stations:
         #
 
         if df['LATITUDE'].isna().all() or df['LONGITUDE'].isna().all():
-            print('No valid latitude/longitude for station ' + station_id + '. Skipping.')
+            if verbose:
+                print('No valid latitude/longitude for station ' + station_id + '. Skipping.')
             return None
 
         #
@@ -1673,7 +1687,8 @@ class Stations:
         #
 
         if df[var_names_lcd].isna().all().all():
-            print('No valid data for the requested variables for station ' + station_id + '. Skipping.')
+            if verbose:
+                print('No valid data for the requested variables for station ' + station_id + '. Skipping.')
             return None
 
         # Convert to numpy array of numpy.datetime64 objects
@@ -1756,19 +1771,21 @@ class Stations:
 
         # Loop over observables
 
-        print()
+        if verbose:
+            print()
 
         for var_name_lcd, var_name_output in zip(var_names_lcd, var_names_output, strict=False):
-            print(
-                'Constructing full-hourly time series for the station '
-                + station_id
-                + ' for the time range '
-                + str(start_year)
-                + '-'
-                + str(end_year)
-                + ' for '
-                + var_name_lcd
-            )
+            if verbose:
+                print(
+                    'Constructing full-hourly time series for the station '
+                    + station_id
+                    + ' for the time range '
+                    + str(start_year)
+                    + '-'
+                    + str(end_year)
+                    + ' for '
+                    + var_name_lcd
+                )
 
             timeseries_hourly = np.full(hour_n, np.nan)
 
@@ -1944,7 +1961,8 @@ class Stations:
                         plt.savefig(plot_file, bbox_inches='tight', dpi=600)
                         plt.close()
 
-                        print('Created the plot ' + str(plot_file))
+                        if verbose:
+                            print('Created the plot ' + str(plot_file))
 
                         # Attempts to prevent run-away memory use in repeated calls (thanks to the Python language not having been designed for high performance applications)
                         del fig, ax

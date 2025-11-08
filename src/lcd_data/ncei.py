@@ -129,7 +129,7 @@ def lcd_data_url(year: int, station_id: str) -> str:
     return url
 
 
-def lcd_data_urls(station_ids: list[str], start_year: int, end_year: int, n_jobs: int = 16) -> list[str]:
+def lcd_data_urls(station_ids: list[str], start_year: int, end_year: int, n_jobs: int = 16, verbose: bool = False) -> list[str]:
     """
     Collects and returns URLs of all available LCD data file from the NCEI server
     for a list of stations and for an inclusive range of years.
@@ -139,6 +139,7 @@ def lcd_data_urls(station_ids: list[str], start_year: int, end_year: int, n_jobs
         start_year (int): First year to include (inclusive).
         end_year   (int): Last year to include (inclusive). Must be >= start_year.
         n_jobs (int): Maximum number of parallel web access operations
+        verbose (bool): If True, print information. Defaults to False.
 
     Returns:
         list[str]: Absolute URLs of files under the specified year directories.
@@ -151,7 +152,8 @@ def lcd_data_urls(station_ids: list[str], start_year: int, end_year: int, n_jobs
     for year in range(start_year, end_year + 1):
         year_dir = lcd_url + '/index.html#v2/access/' + str(year)
 
-        print('Collecting data file URLs from NCEI server directory', year_dir, flush=True)
+        if verbose:
+            print('Collecting data file URLs from NCEI server directory', year_dir, flush=True)
 
         candidates = [f"{lcd_url}/v2/access/{year}/LCD_{sid}_{year}.csv" for sid in station_ids]
 
@@ -221,9 +223,10 @@ def download_many(
         list[Path]: List of local paths of the downloaded files.
     """
 
-    print()
-    print('Downloading observations from NCEI server')
-    print()
+    if verbose:
+        print()
+        print('Downloading observations from NCEI server')
+        print()
 
     # Construct URLs and local file paths
 

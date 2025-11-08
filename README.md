@@ -19,7 +19,7 @@ It provides:
   
     from the irregularly spaced, local time LCD v2 station observation time series, for a selected station or for stations in the selected U.S. state/territory or RTO/ISO region, and a user-specified time range. The time series are saved in a netCDF file.  
     
-- Modules for processing LCD v2 station observations.
+- Modules for downloading and processing LCD v2 station observations.
 
 LCD v2 is provided by the [National Centers for Environmental Information (NCEI)](https://www.ncei.noaa.gov/).
 
@@ -91,6 +91,14 @@ Original and interpolated full-hourly UTC time series in November 2024, Twentyni
 ## Public API
 
 ### Modules
+
+#### `lcd_data.build_lcd_dataset`
+
+Provides API mirroring the CLI for building LCD datasets from NOAA NCEI observations.
+
+- `run_build(start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline=False, verbose=False)`:  
+  
+  Downloads LCD station metadata and observations for a selected region or station, filters by availability, constructs full-hourly UTC time series, and writes the results to a NetCDF file. Operates both online (with automatic downloads) and offline (using pre-downloaded files).
 
 #### `lcd_data.ncei`
 Utilities for station metadata and LCD v2 downloads.
