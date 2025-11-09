@@ -719,7 +719,7 @@ class Stations:
                 relative humidity.
             dict:
                 "units" mapping of column name to unit string (for example,
-                "C", "hPa", "m/s") or "None" if not applicable.
+                "C", "hPa", "m s-1") or "None" if not applicable.
 
         Notes:
             The function preserves the general LCD column layout but performs
@@ -1168,8 +1168,8 @@ class Stations:
             'km',
             'C',
             '° (1-360)',
-            'm/s',
-            'm/s',
+            'm s-1',
+            'm s-1',
             'LST (HH:mm)',
             'LST (HH:mm)',
             'C',
@@ -1178,19 +1178,19 @@ class Stations:
             'hPa',
             'hPa',
             'C',
-            'm/s',
+            'm s-1',
             'C',
             'C',
             'C',
             'C',
             'C',
             '(1-360)',
-            'm/s',
+            'm s-1',
             'mm',
             'mm',
             'mm',
             '° (1-360)',
-            'm/s',
+            'm s-1',
             '2-digit codes',
             'percent',
             'count',
@@ -1226,7 +1226,7 @@ class Stations:
             'mm',
             'mm',
             'C',
-            'm/s',
+            'm s-1',
             'C',
             'C',
             'count',
