@@ -54,33 +54,46 @@ The following describes the internal workflow performed by the command-line tool
 
 ## Command-line interface (CLI)
 
-The CLI is exposed as `"build-lcd-dataset"` when installed:
+The CLI is exposed as `"build-lcd-dataset"` when installed.
+
+**Usage:**
 
 ```bash
-# Provide usage information, a list of two-letter U.S. state/territory codes, and a list of RTO/ISO region names:
-build-lcd-dataset --help
-  
-# Download LCDv2 data and build dataset as a netCDF file for station USW00003017 for the years 2020 to 2025, in the directory /path/to/data, and create plots in the directory /path/to/plots:
-build-lcd-dataset 2020 2025 USW00003017 /path/to/data -p /path/to/plots
-  
-# Download LCDv2 data and build dataset as a netCDF file for the RTO region `ERCOT` for the year 2022 in the directory /path/to/data, using at most 32 parallel download processes:
-build-lcd-dataset 2022 2022 ERCOT /path/to/data -n 32
-  
-# Build dataset as a netCDF file for the state of Colorado for the year 2021, in the directory /path/to/data, offline from LCDv2 data that have been previously downloaded to the directory /path/to/data:
-build-lcd-dataset 2021 2021 CO /path/to/data --offline
+build-lcd-dataset START_YEAR END_YEAR REGION DATA_DIR [-n N_JOBS] [-o] [-p PLOT_DIR] [-r] [-v]
 ```
 
 **Positional arguments**  
 
-- `start_year` and `end_year`: Inclusive range of years.  
-- `region_name`: Two-letter U.S. state or territory code (e.g., `CA`, `PR`), the special region `CONUS`, one of the RTO/ISO codes (`ERCOT`, `CAISO`, `ISONE`, `NYISO`, `MISO`, `SPP`, `PJM`), or a U.S. station identifier as in [the GHCNh station list](https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/doc/ghcnh-station-list.txt).  
-- `data_dir`: Destination directory for station lists, downloads, and outputs.
+- `START_YEAR` and `END_YEAR`: Inclusive range of years  
+- `REGION`: Region or station selector. Use a two-letter U.S. state or territory code, `'CONUS'`, one of the RTO/ISO codes, or a GHCNh station identifier  
+- `DATA_DIR`: Directory into which data will be downloaded  
 
 **Options**  
 
-- `-n, --n INT`: Maximum number of parallel downloads.  
-- `-o, --offline`: Work offline; expect required files to be present in `data_dir`.  
-- `-p, --plotdir PATH`: Directory to write comparison plots; plotting is slow.
+- `-n, --n N_JOBS`: Number of parallel download processes. Values greater than 1 accelerate downloads but may increase the risk of network errors.  
+- `-o, --offline`: Work offline. All required files must have been downloaded to `DATA_DIR` in a previous call without this flag.  
+- `-p, --plotdir PLOT_DIR`: Directory where plots of the original and interpolated full-hourly time series will be created. Very slow. If omitted, no plots are generated.  
+- `-r, --refresh`: Download and process files even if they already exist in `DATA_DIR`.  
+- `-v, --verbose`: Print progress information.  
+
+**Examples:**
+
+```bash
+# Show usage information, valid region codes, and RTO/ISO region names:
+build-lcd-dataset --help
+
+# Download LCDv2 data and build a dataset as a NetCDF file for station USW00003017 for the years 2020–2025, 
+# in the directory /path/to/data, and create plots in /path/to/plots:
+build-lcd-dataset 2020 2025 USW00003017 /path/to/data -p /path/to/plots
+
+# Download LCDv2 data and build a dataset as a NetCDF file for the RTO region ERCOT for the year 2022 
+# in the directory /path/to/data, using 32 parallel download processes:
+build-lcd-dataset 2022 2022 ERCOT /path/to/data -n 32
+
+# Build a dataset as a NetCDF file for the state of Colorado for the year 2021, offline from data 
+# previously downloaded to /path/to/data:
+build-lcd-dataset 2021 2021 CO /path/to/data --offline
+```
 
 ## Sample results
 
@@ -94,11 +107,14 @@ Original and interpolated full-hourly UTC time series in November 2024, Twentyni
 
 #### `lcd_data.build_lcd_dataset`
 
-Provides API mirroring the CLI for building LCD datasets from NOAA NCEI observations.
+Provides a programmatic API equivalent to the command-line interface for building LCD datasets from NOAA NCEI observations.
 
-- `run_build(start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline=False, verbose=False)`:  
+- `run_build(start_year, end_year, region_name, data_dir, plot_dir=None, n_jobs=1, offline=False, refresh=False, verbose=False)`:  
   
-  Downloads LCD station metadata and observations for a selected region or station, filters by availability, constructs full-hourly UTC time series, and writes the results to a NetCDF file. Operates both online (with automatic downloads) and offline (using pre-downloaded files).
+  Downloads, processes, and assembles NOAA NCEI Local Climatological Data (LCD) into a NetCDF file containing full-hourly UTC time series for a specified geographic region or individual station over an inclusive range of years.  
+  Operates both online (with automatic downloads) and offline (using pre-downloaded files).  
+  If `plot_dir` is provided, diagnostic plots of original and interpolated time series are generated.  
+  Returns the `Path` to the generated NetCDF file.
 
 #### `lcd_data.ncei`
 Utilities for station metadata and LCD v2 downloads.
