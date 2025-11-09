@@ -30,7 +30,7 @@ Workflow:
 Output files:
 
 - A text file listing the stations used (for regions).
-- The downloaded LCD data files (unless offline mode is selected).
+- The downloaded LCD files (unless offline mode is selected).
 - Optional diagnostic plots, if a plot directory is specified.
 - A NetCDF file containing the full-hourly UTC time series.
 
@@ -63,13 +63,15 @@ def run_build(
     region_name: str,
     data_dir: Path,
     plot_dir: Path,
-    n_jobs: int,
+    n_jobs: int = 1,
     offline: bool = False,
+    refresh: bool = False,
     verbose: bool = False,
 ) -> Path:
     '''
-    Download, process, and assemble NOAA NCEI Local Climatological Data (LCD) into a full-hourly UTC time
-    series for a specified geographic region or individual station over a given range of years.
+    Download, process, and assemble NOAA NCEI Local Climatological Data (LCD) into a netCDF file with
+    full-hourly UTC time series for a specified geographic region or individual station over a given
+    range of years.
 
     Parameters
     ----------
@@ -84,10 +86,18 @@ def run_build(
         Directory where station lists, downloaded LCD files, and outputs will be stored. Created if it does not exist.
     plot_dir : Path
         Directory where diagnostic plots will be generated. If None, plots are not created.
-    n_jobs : int
-        Number of parallel download processes to use. If 1, downloads are performed serially.
+    n_jobs : int, optional
+        Number of parallel download processes to use. If 1, downloads are performed serially. Default is 1.
     offline : bool, optional
         If True, operates without network access and expects all required files to be present locally. Default is False.
+    refresh : bool, optional:
+        If True:
+          - Download a LCD file even if it already exists on disk.
+          - Assemble the LCD into a netCDF file with full-hourly UTC time series even if the netCDF file already exists on disk.
+        If False:
+          - Do not download a LCD file even if already exists on disk.
+          - Do not assemble the LCD into a netCDF file with full-hourly UTC time series if the netCDF file already exists on disk.
+        Default is False.
     verbose : bool, optional
         If True, prints detailed progress messages. Default is False.
 
@@ -192,20 +202,21 @@ def run_build(
 
     if not offline:
         _ = ncei.download_many(
-            start_date.year, end_date.year, region_stations.ids(), data_dir, n_jobs=n_jobs, refresh=False, verbose=verbose
+            start_date.year, end_date.year, region_stations.ids(), data_dir, n_jobs=n_jobs, refresh=refresh, verbose=verbose
         )
 
     # Construct full-hourly UTC time series from the LCD station data
 
-    region_stations.construct_hourly(
-        data_dir, start_date.year, end_date.year, region=region_name, plot_dir=plot_dir, verbose=verbose
-    )
-
-    # Save full-hourly UTC time series as a netCDF file
-
     lcd_netcdf_file = data_dir / Path(region_name + '.' + str(start_date.year) + '-' + str(end_date.year) + '.nc')
 
-    region_stations.write_utc_hourly_netcdf(lcd_netcdf_file, verbose=verbose)
+    if refresh or not lcd_netcdf_file.exists():
+        region_stations.construct_hourly(
+            data_dir, start_date.year, end_date.year, region=region_name, plot_dir=plot_dir, verbose=verbose
+        )
+
+        # Save full-hourly UTC time series as a netCDF file
+
+        region_stations.write_utc_hourly_netcdf(lcd_netcdf_file, verbose=verbose)
 
     return lcd_netcdf_file
 
@@ -327,6 +338,13 @@ def arg_parse(argv=None):
     )
 
     parser.add_argument(
+        '-r',
+        '--refresh',
+        action='store_true',
+        help=('Download and process files even if they already exist in the data directory'),
+    )
+
+    parser.add_argument(
         '-p',
         '--plotdir',
         type=str,
@@ -345,13 +363,12 @@ def arg_parse(argv=None):
 
     plot_dir = Path(args.plotdir) if args.plotdir is not None else None
 
-    n_jobs = args.n
+    n_jobs: int | None = args.n_jobs
+    offline: bool | None = args.offline
+    refresh: bool | None = args.refresh
+    verbose: bool | None = args.verbose
 
-    offline = args.offline
-
-    verbose = args.verbose
-
-    return (start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline, verbose)
+    return (start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline, refresh, verbose)
 
 
 def main(argv=None):
@@ -359,11 +376,13 @@ def main(argv=None):
     Command line interface entry point.
     '''
 
-    (start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline, verbose) = arg_parse(
+    (start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline, refresh, verbose) = arg_parse(
         argv if argv is not None else sys.argv[1:]
     )
 
-    lcd_netcdf_file = run_build(start_year, end_year, region_name, data_dir, plot_dir, n_jobs, offline=offline, verbose=verbose)
+    lcd_netcdf_file = run_build(
+        start_year, end_year, region_name, data_dir, plot_dir, n_jobs=n_jobs, offline=offline, refresh=refresh, verbose=verbose
+    )
 
 
 if __name__ == '__main__':
