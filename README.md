@@ -1,6 +1,6 @@
-# lcd-data
+# lcd-v2-data
 
-**lcd-data** is a Python toolkit for downloading and processing [Local Climatological Data version 2 (LCDv2) ](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data) data.
+**lcd-v2-data** is a Python toolkit for downloading and processing [Local Climatological Data version 2 (LCDv2) ](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data) data.
 
 It provides:
 
@@ -26,7 +26,7 @@ LCD v2 is provided by the [National Centers for Environmental Information (NCEI)
 ## Installation
 
 ```bash
-mamba install -c jan.kazil -c conda-forge lcd-data
+mamba install -c jan.kazil -c conda-forge lcd-v2-data
 ```
 
 ## Overview
