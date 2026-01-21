@@ -363,7 +363,7 @@ def arg_parse(argv=None):
 
     plot_dir = Path(args.plotdir) if args.plotdir is not None else None
 
-    n_jobs: int | None = args.n_jobs
+    n_jobs: int | None = args.n
     offline: bool | None = args.offline
     refresh: bool | None = args.refresh
     verbose: bool | None = args.verbose
