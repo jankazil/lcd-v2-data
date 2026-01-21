@@ -763,15 +763,21 @@ class Stations:
                 time_column_index = [1, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101]
 
                 for ii in time_column_index:
-                    original_column = df.iloc[:, ii].copy()
+                    col_label = df.columns[ii]
+
+                    original_column = df[col_label].copy()
 
                     converted_column = pd.to_datetime(original_column, errors='coerce')
 
-                    df.iloc[:, ii] = converted_column
+                    df[col_label] = converted_column
 
                     # Find rows where conversion failed (NaT after conversion)
 
-                    failed = original_column[converted_column.isna() & original_column.notna()]
+                    failed_mask = (
+                        converted_column.isna() & original_column.notna() & original_column.astype(str).str.strip().ne('')
+                    )
+                    failed = original_column[failed_mask]
+
                     if not failed.empty:
                         print(f'Failed to convert time string in column {ii} to datetime object. Problematic time string(s):')
                         print(failed)
@@ -828,7 +834,13 @@ class Stations:
                     # Set time to UTC = LST - utc_offset, then localize to UTC
                     utc_vals = (converted - offset_td).dt.tz_localize('UTC')
 
-                    # Assign back only where valid; this keeps original values elsewhere
+                    # Ensure the column dtype is timezone-aware timestamp, to prevent
+                    # type errors when assigning timezone-aware timestamps to it
+                    df[col_label] = pd.to_datetime(df[col_label], errors='coerce').dt.tz_localize(
+                        'UTC', nonexistent='NaT', ambiguous='NaT'
+                    )
+
+                    # Assign only where valid; this keeps original values elsewhere
                     df.loc[mask, col_label] = utc_vals[mask]
 
                 # Convert columns that contain numbers to floating point values
@@ -926,7 +938,8 @@ class Stations:
                 ]
 
                 for ii in column_index:
-                    df.iloc[:, ii] = pd.to_numeric(df.iloc[:, ii], errors='coerce').astype(float)
+                    col_label = df.columns[ii]
+                    df[col_label] = pd.to_numeric(df[col_label], errors='coerce').astype(float)
 
                 # Convert columns that contain degrees Celsius with 18.3 degree base to degree Celsius
 
