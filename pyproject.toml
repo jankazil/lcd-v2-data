@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lcd-v2-data"
-version = "1.1.5"
+version = "1.1.6"
 description = "Python toolkit for downloading and processing Local Climatological Data version 2 (LCDv2) data."
 readme = "README.md"
 requires-python = ">=3.11,<=3.12.9"
