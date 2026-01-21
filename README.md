@@ -84,15 +84,15 @@ build-lcd-dataset --help
 
 # Download LCDv2 data and build a dataset as a NetCDF file for station USW00003017 for the years 2020–2025, 
 # in the directory /path/to/data, and create plots in /path/to/plots:
-build-lcd-dataset 2020 2025 USW00003017 /path/to/data -p /path/to/plots
+build-lcd-dataset -v 2020 2025 USW00003017 /path/to/data -p /path/to/plots
 
 # Download LCDv2 data and build a dataset as a NetCDF file for the RTO region ERCOT for the year 2022 
 # in the directory /path/to/data, using 32 parallel download processes:
-build-lcd-dataset 2022 2022 ERCOT /path/to/data -n 32
+build-lcd-dataset -v 2022 2022 ERCOT /path/to/data -n 32
 
 # Build a dataset as a NetCDF file for the state of Colorado for the year 2021, offline from data 
 # previously downloaded to /path/to/data:
-build-lcd-dataset 2021 2021 CO /path/to/data --offline
+build-lcd-dataset -v 2021 2021 CO /path/to/data --offline
 ```
 
 ## Sample results
