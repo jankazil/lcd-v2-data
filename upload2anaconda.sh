@@ -6,6 +6,18 @@ set -euo pipefail
 # Build and upload a pure-Python conda package from the local working tree
 ################################################################################
 
+echo "
+If the package import name differs from the project name, set an explicit override before running the script.
+
+Example:
+
+  export IMPORT_NAME_OVERRIDE="lcd_data"
+
+This is needed when the installable Python module name is not the same as the package name with hyphens changed to underscores.
+"
+
+IMPORT_NAME_OVERRIDE="${IMPORT_NAME_OVERRIDE:-}"
+
 ANACONDA_USER_NAME='jan.kazil'
 LICENSE_ID='BSD-3-Clause'
 PYPROJECT="${PYPROJECT:-pyproject.toml}"
@@ -174,7 +186,12 @@ if [[ -z "$CODE_NAME" || -z "$CODE_TAG" || -z "$SUMMARY" ]]; then
   exit 1
 fi
 
-IMPORT_NAME=$(printf '%s' "$CODE_NAME" | tr '-' '_')
+
+if [[ -n "$IMPORT_NAME_OVERRIDE" ]]; then
+  IMPORT_NAME="$IMPORT_NAME_OVERRIDE"
+else
+  IMPORT_NAME=$(printf '%s' "$CODE_NAME" | tr '-' '_')
+fi
 DEPENDENCIES="${DEPS_LIST#|}"
 
 echo
