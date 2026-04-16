@@ -11,9 +11,9 @@ If the package import name differs from the project name, set an explicit overri
 
 Example:
 
-  export IMPORT_NAME_OVERRIDE="lcd_data"
+  export IMPORT_NAME_OVERRIDE="my_package"
 
-This is needed when the installable Python module name is not the same as the package name with hyphens changed to underscores.
+This is needed, e.g., when the installable Python module name is not the same as the package name with hyphens changed to underscores.
 "
 
 IMPORT_NAME_OVERRIDE="${IMPORT_NAME_OVERRIDE:-}"
@@ -296,50 +296,19 @@ fi
 
 conda activate "${BUILD_ENV_NAME}"
 
-echo
-echo "Using conda-build from:"
-echo "  CONDA_PREFIX=$CONDA_PREFIX"
-conda build --version
-echo
-
+ARTIFACT="$(conda build -c conda-forge --python "${PYTHON_VERSION}" recipe --output)"
 conda build -c conda-forge --python "${PYTHON_VERSION}" recipe
 
-CONDA_BLD_PATH="$(conda info --base)/conda-bld"
-
-echo
-echo "Built artifacts:"
-find "$CONDA_BLD_PATH" -maxdepth 2 -type f \( -name "${CODE_NAME}-*.conda" -o -name "${CODE_NAME}-*.tar.bz2" \) -print || true
-echo
-
-ARTIFACT=$(
-  find "$CONDA_BLD_PATH" -maxdepth 2 -type f -name "${CODE_NAME}-${CODE_TAG}-*.conda" | head -n 1
-)
-
-if [[ -z "${ARTIFACT:-}" ]]; then
-  ARTIFACT=$(
-    find "$CONDA_BLD_PATH" -maxdepth 2 -type f -name "${CODE_NAME}-${CODE_TAG}-*.tar.bz2" | head -n 1
-  )
-fi
-
-if [[ -z "${ARTIFACT:-}" ]]; then
-  echo "Error: no built artifact found for ${CODE_NAME} ${CODE_TAG}" >&2
+if [[ ! -f "$ARTIFACT" ]]; then
+  echo "Error: expected artifact not found: $ARTIFACT" >&2
   exit 1
 fi
 
 echo "Selected artifact:"
 echo "  $ARTIFACT"
-echo
 
 echo "Logging in to anaconda.org"
 anaconda login
-echo
-
-read -r -p "Upload artifact to anaconda.org user ${ANACONDA_USER_NAME}? (Y/n) " REPLY
-echo
-if [[ "${REPLY:-Y}" != "Y" ]]; then
-  echo "Upload skipped."
-  exit 0
-fi
 
 anaconda upload --user "${ANACONDA_USER_NAME}" "$ARTIFACT"
 
