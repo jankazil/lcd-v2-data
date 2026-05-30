@@ -1,8 +1,8 @@
-name: lcd_data
+name: lcd-v2-data
 channels:
   - conda-forge
 dependencies:
-  - python>=3.11
+  - python>=3.11,<=3.12.9
   - pip
   - pipreqs
   - pre-commit
@@ -22,4 +22,4 @@ dependencies:
   - notebook
   - ipykernel
   - pip:
-      - git+https://github.com/jankazil/lcd-data
+      - git+https://github.com/jankazil/lcd-v2-data
