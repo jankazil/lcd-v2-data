@@ -19,6 +19,11 @@ from timezonefinder import TimezoneFinder
 
 from lcd_data import ncei, saturation
 
+temperature_name = 'HourlyDryBulbTemperature'
+dewpoint_name = 'HourlyDewPointTemperature'
+windspeed_name = 'HourlyWindSpeed'
+rh_name = 'HourlyRelativeHumidity'
+
 matplotlib.use("Agg")  # Important to avoid runaway memory use upon creating plots repeatedly.
 
 
@@ -682,12 +687,12 @@ class Stations:
             drops the original "DATE" column.
           - Filters out rows where "REPORT_TYPE" is "BOGUS", "SOD"
             (summary of day), or "SOM" (summary of month).
+          - Removes duplicated times.
           - Drops temperature and dew point temperature when temperature > 60 C.
             Such extreme values are indoubtedly non-representative, and may be caused,
             e.g., by aircraft exhaust. Still, non-representative values < 60 C
             may remain in the data.
           - Sets station latitude, longitude, and elevation to values from station metadata
-          - Removes duplicated times
           - Computes hourly relative humidity when both dry-bulb temperature
             and dew-point temperature are available. Values outside [0, 101]
             are set to NaN. Values between 100 and 101 are set to 100. The
@@ -970,15 +975,10 @@ class Stations:
         # Remove rows in which the column 'REPORT_TYPE' is 'SOM' (summary of month)
         df_output = df_output[df_output['REPORT_TYPE'] != 'SOM']
 
-        # Regularize temperature to not exceed 60C - this eliminates extreme values, e.g. caused by aircraft exhaust
-        mask = df_output['HourlyDryBulbTemperature'] > 60
-        df_output.loc[mask, 'HourlyDryBulbTemperature'] = np.nan
-        df_output.loc[mask, 'HourlyDewPointTemperature'] = np.nan
-
         # Remove time duplicates by keeping the first duplicated time at which not all
         # selected observables are NaNs, for each duplicated time
 
-        observables = ['HourlyDryBulbTemperature', 'HourlyDewPointTemperature', 'HourlyWindSpeed']
+        observables = [temperature_name, dewpoint_name, windspeed_name]
 
         if df_output.index.has_duplicates:
             dup_mask = df_output.index.duplicated(keep=False)
@@ -1022,6 +1022,23 @@ class Stations:
             mask = np.ones(len(df_output), dtype=bool)
             mask[row_numbers_remove] = False
             df_output = df_output[mask]
+
+        # Regularize temperature to not exceed 60 C - this eliminates extreme values, e.g. caused by aircraft exhaust
+
+        T_threshold = 60.0
+
+        mask = df_output[temperature_name] > T_threshold
+
+        if mask.any():
+            if verbose:
+                print()
+                print(f'Removing temperature/dew-point values because {temperature_name} > {T_threshold:g} C:')
+
+                for timestamp, temperature_value in df_output.loc[mask, temperature_name].items():
+                    print(f'  station={station_id}  time={timestamp}  {temperature_name}={temperature_value:.2f} C')
+
+            df_output.loc[mask, temperature_name] = np.nan
+            df_output.loc[mask, dewpoint_name] = np.nan
 
         # Create a dictionary that translates the column name to long name
 
@@ -1295,11 +1312,10 @@ class Stations:
         # Calculate relative humidity where both temperature and dew point temperature are available
         #
 
-        mask = df_output['HourlyDewPointTemperature'].notna() & df_output['HourlyDryBulbTemperature'].notna()
+        mask = df_output[dewpoint_name].notna() & df_output[temperature_name].notna()
 
         # Column for relative humidity
 
-        rh_name = 'HourlyRelativeHumidity'
         long_names[rh_name] = 'Relative humidity (at ~ 2 m)'
         units[rh_name] = '%'
 
@@ -1309,8 +1325,8 @@ class Stations:
 
         # Calculate RH where temperature and dry bulk temperature are available
 
-        df_output.loc[mask, rh_name] = df_output.loc[mask, ['HourlyDryBulbTemperature', 'HourlyDewPointTemperature']].apply(
-            lambda s: saturation.rh(s['HourlyDryBulbTemperature'], s['HourlyDewPointTemperature']), axis=1
+        df_output.loc[mask, rh_name] = df_output.loc[mask, [temperature_name, dewpoint_name]].apply(
+            lambda s: saturation.rh(s[temperature_name], s[dewpoint_name]), axis=1
         )
 
         # RH outside the [0,101] range indicates a problem with the temperature/dew point temperature.
@@ -1445,7 +1461,7 @@ class Stations:
             )
         '''
 
-        var_names_lcd = ['HourlyDryBulbTemperature', 'HourlyDewPointTemperature', 'HourlyRelativeHumidity', 'HourlyWindSpeed']
+        var_names_lcd = [temperature_name, dewpoint_name, rh_name, windspeed_name]
         var_names = ['T', 'Td', 'RH', 'windspeed']
 
         ds_stations = []
