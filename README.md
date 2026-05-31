@@ -5,26 +5,32 @@
 It provides:
 
 - A top-level command-line tool that
-  
+
   - automates the download of LCD v2 station observations for
     - individual stations
     - U.S. states and territories
     - Regional Transmission Organization (RTO) / Independent System Operator (ISO) regions
-    
+
   - constructs full-hourly UTC time series of
     - temperature at 2 m
     - dew point temperature at 2 m
     - relative humidity at 2 m
     - wind speed at 10 m
-  
+
     from the irregularly spaced, local time LCD v2 station observation time series, for a selected station or for stations in the selected U.S. state/territory or RTO/ISO region, and a user-specified time range. The time series are saved in a netCDF file.  
-    
+
 - Modules for downloading and processing LCD v2 station observations.
 
 LCD v2 is provided by the [National Centers for Environmental Information (NCEI)](https://www.ncei.noaa.gov/).
 
 ## Installation
 
+### pip
+```bash
+pip install lcd-v2-data
+```
+
+### conda / mamba
 ```bash
 mamba install -c jan.kazil -c conda-forge lcd-v2-data
 ```
@@ -82,15 +88,15 @@ build-lcd-dataset START_YEAR END_YEAR REGION DATA_DIR [-n N_JOBS] [-o] [-p PLOT_
 # Show usage information, valid region codes, and RTO/ISO region names:
 build-lcd-dataset --help
 
-# Download LCDv2 data and build a dataset as a NetCDF file for station USW00003017 for the years 2020–2025, 
+# Download LCDv2 data and build a dataset as a NetCDF file for station USW00003017 for the years 2020–2025,
 # in the directory /path/to/data, and create plots in /path/to/plots:
 build-lcd-dataset -v 2020 2025 USW00003017 /path/to/data -p /path/to/plots
 
-# Download LCDv2 data and build a dataset as a NetCDF file for the RTO region ERCOT for the year 2022 
+# Download LCDv2 data and build a dataset as a NetCDF file for the RTO region ERCOT for the year 2022
 # in the directory /path/to/data, using 32 parallel download processes:
 build-lcd-dataset -v 2022 2022 ERCOT /path/to/data -n 32
 
-# Build a dataset as a NetCDF file for the state of Colorado for the year 2021, offline from data 
+# Build a dataset as a NetCDF file for the state of Colorado for the year 2021, offline from data
 # previously downloaded to /path/to/data:
 build-lcd-dataset -v 2021 2021 CO /path/to/data --offline
 ```
@@ -110,7 +116,7 @@ Original and interpolated full-hourly UTC time series in November 2024, Twentyni
 Provides a programmatic API equivalent to the command-line interface for building LCD datasets from NOAA NCEI observations.
 
 - `run_build(start_year, end_year, region_name, data_dir, plot_dir=None, n_jobs=1, offline=False, refresh=False, verbose=False)`:  
-  
+
   Downloads, processes, and assembles NOAA NCEI Local Climatological Data (LCD) into a NetCDF file containing full-hourly UTC time series for a specified geographic region or individual station over an inclusive range of years.  
   Operates both online (with automatic downloads) and offline (using pre-downloaded files).  
   If `plot_dir` is provided, diagnostic plots of original and interpolated time series are generated.  
