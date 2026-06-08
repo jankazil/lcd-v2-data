@@ -50,7 +50,7 @@ lcd_data = [
 
 [tool.ruff]
 line-length = 128
-target-version = "py313"
+target-version = "py311"
 extend-exclude = [
     "dist",
     "build",

@@ -1,25 +1,38 @@
 name: lcd-v2-data
+
 channels:
   - conda-forge
+
 dependencies:
+  # Python
   - python>=3.11,<=3.12.9
   - pip
-  - pipreqs
-  - pre-commit
-  - ruff
-  - mypy
   - mamba
+
+  # Build tooling
+  - setuptools>=77
+  - wheel
+
+  # Runtime dependencies
   - geopandas
   - matplotlib
-  - netcdf4
   - numpy
+  - netcdf4
   - pandas
   - requests
   - shapely
+  - timezonefinder
   - xarray
+
+  # Jupyter support
   - jupyter_client
   - jupyter_core
   - notebook
   - ipykernel
-  - pip:
-      - git+https://github.com/jankazil/lcd-v2-data
+
+  # Development tooling, kept here because setup-dev-env.sh installs .[dev] with --no-deps.
+  - pytest
+  - pytest-cov
+  - mypy
+  - ruff
+  - pre-commit
