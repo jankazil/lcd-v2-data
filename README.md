@@ -167,6 +167,10 @@ Station catalog handling, filtering, reading, interpolation, and writing.
 
 ## Development
 
+### Code Development Commands
+
+- `make setup-dev-env` - Creates an editable conda development environment with all required dependencies.
+
 ### Code Quality and Testing Commands
 
 - `make fmt` - Runs ruff format, which automatically reformats Python files according to the style rules in `pyproject.toml`
@@ -174,6 +178,11 @@ Station catalog handling, filtering, reading, interpolation, and writing.
 - `make check` - Runs fmt and lint.
 - `make type` - Currently disabled. Runs mypy, the static type checker, using the strictness settings from `pyproject.toml`. Mypy is a static type checker for Python, a dynamically typed language. Because static analysis cannot account for all dynamic runtime behaviors, mypy may report false positives which do not reflect actual runtime issues.
 - `make test` - Runs pytest with reporting (configured in `pyproject.toml`).
+
+### Code Publishing Commands
+
+- `make upload-pypi` - Uploads the package to pypi.org (credentials required)
+- `make upload-anaconda` - Uploads the package to anaconda.org (credentials required)
 
 ## Disclaimers
 
