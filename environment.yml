@@ -33,6 +33,5 @@ dependencies:
   # Development tooling, kept here because setup-dev-env.sh installs .[dev] with --no-deps.
   - pytest
   - pytest-cov
-  - mypy
   - ruff
   - pre-commit
