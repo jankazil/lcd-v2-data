@@ -15,7 +15,7 @@ It provides:
     - temperature at 2 m
     - dew point temperature at 2 m
     - relative humidity at 2 m
-    - wind speed at 10 m
+    - west-east (U) and south-north (V) wind speed at 10 m
 
     from the irregularly spaced, local time LCD v2 station observation time series, for a selected station or for stations in the selected U.S. state/territory or RTO/ISO region, and a user-specified time range. The time series are saved in a netCDF file.  
 
@@ -52,7 +52,7 @@ The following describes the internal workflow performed by the command-line tool
 3. Filter the stations by data availability for the requested year range, either online by probing NCEI or offline by checking local files.
 4. Save the filtered station list for reference.
 5. Download LCD v2 observation files from NCEI for the selected stations and years, skipping files already present that match by ETag.
-6. Create full-hourly UTC time series for temperature (T), dew point temperature (Td), relative humidity (RH), and wind speed by converting local observation time to UTC and interpolating the data to full hours. Remove temperatures above 60 °C. Perform interpolation only across gaps of up to 2 hours. Derive RH from T and Td.
+6. Create full-hourly UTC time series for temperature (T), dew point temperature (Td), relative humidity (RH), and west east (U) and south-north (V) wind speed by converting local observation time to UTC and interpolating the data to full hours. Remove temperatures above 60 °C. Perform interpolation only across gaps of up to 2 hours. Derive RH from T and Td.
 7. Optionally create comparison plots for the original and interpolated series.
 8. Save the full-hourly UTC time series in a NetCDF file, for the given station or the stations in the state/region.
 
@@ -162,7 +162,7 @@ Station catalog handling, filtering, reading, interpolation, and writing.
 - Availability filters: `filter_by_data_availability_online(start_time, end_time, n_jobs, verbose)` and `filter_by_data_availability_offline(data_dir, start_time, end_time, verbose)`.
 - Station utilities: `filter_by_id(station_id)`, `ids()`, `save_station_list(path)`.
 - `read_station_observations(...)`: Read and clean per‑station LCD v2 observation files; convert times to UTC, coerce numeric columns, correct Celsius-with-18.3° base fields, drop non-observational report types, limit unrealistic temperatures, and compute hourly RH.
-- `construct_hourly(...)`: Build full-hourly UTC series for `T`, `Td`, `RH`, and `windspeed`, with optional plotting and gap-limited interpolation.
+- `construct_hourly(...)`: Build full-hourly UTC series for `T`, `Td`, `RH`, `U`, and `V`, with optional plotting and gap-limited interpolation.
 - `write_utc_hourly_netcdf(path)`: Save the hourly dataset to NetCDF with safe encodings.
 
 ## Development
