@@ -22,7 +22,10 @@ from lcd_data import ncei, saturation
 temperature_name = 'HourlyDryBulbTemperature'
 dewpoint_name = 'HourlyDewPointTemperature'
 windspeed_name = 'HourlyWindSpeed'
+winddirection_name = 'HourlyWindDirection'
 rh_name = 'HourlyRelativeHumidity'
+u_wind_name = 'U'
+v_wind_name = 'V'
 
 matplotlib.use("Agg")  # Important to avoid runaway memory use upon creating plots repeatedly.
 
@@ -978,7 +981,7 @@ class Stations:
         # Remove time duplicates by keeping the first duplicated time at which not all
         # selected observables are NaNs, for each duplicated time
 
-        observables = [temperature_name, dewpoint_name, windspeed_name]
+        observables = [temperature_name, dewpoint_name, windspeed_name, winddirection_name]
 
         if df_output.index.has_duplicates:
             dup_mask = df_output.index.duplicated(keep=False)
@@ -1323,7 +1326,7 @@ class Stations:
 
         df_output[rh_name] = np.nan
 
-        # Calculate RH where temperature and dry bulk temperature are available
+        # Calculate RH where temperature and dew point temperature are available
 
         df_output.loc[mask, rh_name] = df_output.loc[mask, [temperature_name, dewpoint_name]].apply(
             lambda s: saturation.rh(s[temperature_name], s[dewpoint_name]), axis=1
@@ -1338,6 +1341,47 @@ class Stations:
 
         mask = df_output[rh_name].between(100, 101)
         df_output.loc[mask, rh_name] = 100
+
+        #
+        # Calculate U and V components of the wind speed where wind speed and wind direction are available
+        #
+
+        # Wind speed
+
+        speed = pd.to_numeric(df_output[windspeed_name], errors='coerce')
+
+        # Wind direction - assuming meteorological wind direction = angular degrees clockwise from north, indicating the direction the wind is coming from.
+
+        direction = pd.to_numeric(df_output[winddirection_name], errors='coerce')
+
+        # Mask there both wind speed and wind direction have regular values
+
+        mask = speed.notna() & direction.notna()
+
+        # Columns for the wind speed components
+
+        long_names[u_wind_name] = 'West-east wind speed (at ~ 10 m)'
+        long_names[v_wind_name] = 'South-north wind speed (at ~ 10 m)'
+
+        units[u_wind_name] = units[windspeed_name]
+        units[v_wind_name] = units[windspeed_name]
+
+        # Initialize with NaNs
+
+        df_output[u_wind_name] = np.nan
+        df_output[v_wind_name] = np.nan
+
+        # Calculate U and V components of the wind speed where wind speed and wind direction have regular values
+
+        theta = np.deg2rad(direction)
+
+        df_output.loc[mask, u_wind_name] = -speed.loc[mask] * np.sin(theta.loc[mask])
+        df_output.loc[mask, v_wind_name] = -speed.loc[mask] * np.cos(theta.loc[mask])
+
+        # Ensure that zero wind speed is accounted for even if wind direction is not specified at zero wind speed
+
+        calm_mask = speed.eq(0) & direction.isna()
+        df_output.loc[calm_mask, [u_wind_name, v_wind_name]] = 0.0
 
         return df_output, long_names, units
 
@@ -1461,8 +1505,8 @@ class Stations:
             )
         '''
 
-        var_names_lcd = [temperature_name, dewpoint_name, rh_name, windspeed_name]
-        var_names = ['T', 'Td', 'RH', 'windspeed']
+        var_names_lcd = [temperature_name, dewpoint_name, rh_name, u_wind_name, v_wind_name]
+        var_names = ['T', 'Td', 'RH', u_wind_name, v_wind_name]
 
         ds_stations = []
 
