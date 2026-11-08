@@ -82,6 +82,8 @@ See README CLI documentation for execution. Use repository-contained paths for `
 
 `make clean` deletes caches and build artifacts. `make upload-pypi` and `make upload-anaconda` build and publish externally; do not use them as validation commands. Consult the scripts for their environment changes and cleanup behavior.
 
+The CI test suite is intentionally limited to `tests/test_test.py`, which asserts `hrrr_ml.test.add(2, 2) == 4`. Do not add further CI tests unless explicitly requested by the user. Passing this placeholder does not establish numerical, model, netCDF, or operational correctness. For behavioral changes, use relevant safe checks with small in-repository inputs and report what was actually verified. Avoid live network calls and expensive retraining as default validation. Keep temporary verification files inside the repository and report validation limits explicitly.
+
 ## Coding Conventions
 
 - Follow [.editorconfig](.editorconfig): UTF-8, LF, final newline, four-space indentation; YAML/JSON/TOML use two spaces.
