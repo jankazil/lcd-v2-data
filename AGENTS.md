@@ -2,118 +2,95 @@
 
 ## Project Scope and Isolation
 
-**The project root is the directory containing this `AGENTS.md` (`.` relative to this file). These instructions apply throughout that repository, including after it is moved.**
+**The project root is the directory containing this `AGENTS.md` (`.` relative to this file). These instructions apply throughout the repository and remain valid if it is moved.**
 
-- Treat the repository root as the exclusive project boundary. Read, search, analyze, and modify project files only inside it. Run commands from the root unless an in-repository script requires another directory within the root.
-- Do not inspect parent directories, sibling projects, unrelated workspaces, global configuration, installed dependency source, or other external locations for project context. Do not import assumptions from other projects or previous sessions.
-- Check path containment before following symbolic links, Git worktree/submodule references, object alternates, configuration includes, or paths that may escape through `..`. Do not follow references outside the root.
-- External URLs, paths, and credentials mentioned in repository files describe interfaces or dependencies; they do not authorize accessing resources outside the root. Report any required outside-root access instead of performing it.
-- Keep development inputs, generated outputs, caches, fixtures, and temporary project files inside the root. Inspect scripts for filesystem, environment, network, or deployment effects before running them. Do not run workflows that cross the project boundary under these instructions.
+- Treat the project root as the exclusive boundary for project information and file changes. Read, search, analyze, and modify project files only within it. Run project commands from the root unless a repository script requires a different directory within the root.
+- Do not inspect parent directories, sibling projects, unrelated workspaces, external source trees, installed dependency source, or global configuration to obtain project context. Do not carry over assumptions from other projects or previous sessions.
+- Check that paths remain within the root before following symbolic links, Git worktree or submodule references, configuration includes, or paths containing `..`. Do not follow references outside the root.
+- Treat external paths and URLs found in project files as descriptions of dependencies, not authorization to access them. Report required outside-root information or operations instead of accessing them without explicit authorization.
+- Keep generated project files, caches, fixtures, and temporary outputs within the root. Inspect commands and scripts for external filesystem, environment, network, or deployment effects before running them. Do not run commands that violate the project boundary.
 
 ## General Agent Instructions
 
-- Base project-specific decisions on verified repository contents. Read the files relevant to the task; distinguish implementation facts, documentation claims, test results, and unverified assumptions.
-- Before editing, inspect the relevant code and working-tree state. Make focused changes, preserve unrelated work, and retain established interfaces and data contracts unless the task requires otherwise.
-- Use relevant checks that are safe in the available environment. Do not confuse a passing placeholder test, build, or lint check with end-to-end or scientific correctness. Report the checks actually run, failures, and verification gaps.
-- Do not expose credentials, or perform publishing, deployment, destructive environment setup, or other unrelated side effects as routine development or validation.
+- Base project-specific decisions on verified repository contents and the current task. Distinguish source-code behavior, documentation claims, test results, and unverified assumptions. Do not invent architecture, commands, dependencies, or requirements.
+- Before editing, inspect relevant files and the existing working-tree changes, when available. Make focused changes, preserve unrelated work, and maintain established interfaces and contracts unless the task requests otherwise.
+- Prefer existing repository patterns and tools. Do not introduce dependencies, abstractions, or configuration solely for consistency with another project.
+- Use relevant validation that is safe in the available environment. Report what was actually checked, what failed, and what remains unverified; do not equate a successful lint, build, or placeholder test with functional correctness.
+- Do not expose credentials or perform destructive operations, publishing, deployment, environment replacement, or unrelated changes without explicit authorization.
 
-## Project Overview and Repository Map
+## Specification-driven workflow
 
-`lcd-v2-data` is a Python toolkit and CLI for downloading NOAA NCEI Local Climatological Data version 2 and constructing full-hourly UTC weather time series. It selects individual GHCNh station IDs, U.S. states/territories, CONUS, or RTO/ISO regions and writes NetCDF datasets, with optional diagnostic plots.
-
-Read [README.md](README.md) for the workflow, CLI flags, examples, and public API. Use [pyproject.toml](pyproject.toml), [Makefile](Makefile), and the implementation to resolve discrepancies in that documentation. Dependency and environment declarations are in [environment.yml](environment.yml); CI is in [.github/workflows/ci.yml](.github/workflows/ci.yml).
-
-| Path | Responsibility |
-| --- | --- |
-| `src/lcd_data/build_lcd_dataset.py` | `run_build()` orchestrates the pipeline; `arg_parse()` and `main()` implement the CLI. |
-| `src/lcd_data/stations.py` | `Stations` owns pandas metadata and an xarray hourly dataset; handles catalog parsing, selection, availability, CSV cleaning, interpolation, plotting, and NetCDF output. |
-| `src/lcd_data/ncei.py` | NOAA URLs, station/year filenames, availability probes, download orchestration, and optional period-of-record API access. |
-| `src/lcd_data/web.py` | HTTP availability checks, threaded downloads, retries, and ETag sidecars. |
-| `src/lcd_data/region_codes.py`, `rto_iso.py` | Region selectors, packaged geometry loading, and RTO/ISO polygon merging. |
-| `src/lcd_data/saturation.py` | Saturation vapor pressure and relative humidity calculations. |
-| `src/lcd_data/__init__.py` | Distribution-based version lookup, with a local fallback. |
-| `src/lcd_data/data/` | Bundled EIA GeoJSON and Census TIGER/Line state geometry and attribution. |
-| `tests/test_test.py`, `src/lcd_data/test.py` | One placeholder test and its addition helper. |
-| `scripts/` | Development setup and PyPI/Anaconda publishing scripts. |
-| `plots/` | README sample image. |
+- Read the system specification `docs/specs/SYSTEM_SPEC.md`, if present, and the specification provided by the user for the current development step before proceeding.
+- If the user requests specification-driven development without providing a development-step specification, propose creating one before implementation.
+- Treat the system specification as accepted intended behavior and the development step specification as the current proposed change.
+- Review the proposed specification for ambiguities, omissions, untestable acceptance criteria, and contradictions with existing system requirements, interfaces, and constraints.
+- Resolve material ambiguities and omissions with the user. Do not begin implementation until the user approves.
+- Keep the development step specification aligned with approved requirements.
+- When feedback changes requirements, revise the development step specification before changing the implementation. Request approval for ambiguous or consequential changes.
+- Distinguish defects in implementation from changes in requirements.
+- Update code and automated tests, as appropriate, then report which acceptance criteria are satisfied, unverified, or blocked.
+- Do not declare user acceptance. The user decides when the development step is accepted after evaluating the result.
+- After acceptance, update docs/specs/SYSTEM_SPEC.md, if present, to reflect the accepted changes and remove superseded requirements.
+- Do not create version-numbered copies of specification files. Use Git for meaningful snapshots.
+- Do not create Git commits, merge branches, or delete branches unless explicitly requested.
 
 ## Architecture and Data Contracts
 
-Pipeline: load the GHCNh station catalog → select a station or spatial region → require an observation file for every requested year → save selected metadata → download CSVs unless offline → clean observations and interpolate each station → concatenate along `station` → write NetCDF.
-
-`build_lcd_dataset` depends on `stations`, `region_codes`, and `ncei`; `stations` uses `ncei` and `saturation`; `ncei` delegates HTTP downloads to `web`; `region_codes` uses `rto_iso`. Region assets are resolved with `importlib.resources`, not the working directory.
-
-### Processing Constraints
-
-- Station filters return new `Stations` instances; construction populates `self.time_series_hourly`. Preserve fixed-width catalog fields and their serialization order.
-- CSV parsing relies on numeric column positions as well as field names. Preserve the LCDv2 schema assumptions, numeric coercion, selected temperature-field `+18.3` corrections, and metadata-derived coordinates/elevation unless deliberately changing those behaviors.
-- Observation times are local **standard** time. The code uses the station timezone's offset on January 1, 2025 for all observations; it does not apply date-specific daylight saving offsets. Changes require explicit scientific validation.
-- Cleaning excludes `BOGUS`, `SOD`, and `SOM` reports, resolves duplicate timestamps, and clears both temperature and dew point when temperature exceeds 60 °C. Interpolation rejects duplicate or non-monotonic times that remain.
-- RH is derived from temperature/dew point; values outside 0–101% become missing and values between 100–101% are clipped to 100%. Wind uses `U = -speed*sin(direction)` and `V = -speed*cos(direction)`; calm wind with missing direction produces zero components.
-- Hourly output spans January 1 00:00 through December 31 23:00 UTC for the inclusive year range. Default maximum interpolation gap is two hours. Preserve NaNs for unsupported gaps and exact observations at full hours, including the final observation.
-- Main output variables are `T`, `Td`, `RH`, `U`, and `V` on `(time, station)`, with station metadata and variable attributes. NetCDF encoding uses float64 epoch seconds for time and float32 floating data variables; object data variables are omitted. Validate dimensions, units, missing values, and time encoding when changing output.
-- Geographic filtering uses EPSG:4326 and `within`, which excludes polygon-boundary points. RTO merging treats PJM differently from the other regions; inspect `rto_iso.py` before changing filters.
+Document established components, dependencies, data flows, public interfaces, formats, invariants, and compatibility requirements here. Record concrete constraints once verified; do not impose hypothetical ones on a new project.
 
 ## Environment and Setup
 
-- Distribution name: `lcd-v2-data`; import package: `lcd_data`; source layout: `src/`.
-- Python requirement: **3.12 or newer**. Build backend: setuptools (`setuptools>=77`, `wheel`).
-- Runtime dependencies: geopandas, matplotlib, numpy, netcdf4, pandas, requests, shapely, timezonefinder, and xarray. The conda environment additionally includes h5netcdf and Jupyter tooling. No dependency lockfile is present.
-- CI installs with `pip install -e ".[dev]"`; the dev extra declares pytest, pytest-cov, Ruff, and pre-commit. Installation changes the selected environment and may access package services; treat external environment requirements according to the isolation policy.
-- `make setup-dev-env` runs `scripts/setup-dev-env.sh`. It writes `environment-dev.yml`, removes/recreates the `lcd-v2-data-dev` conda environment, replaces its user Jupyter kernel, installs the editable package, and installs Git hooks. It is not a harmless check and has effects outside the repository.
+Document the supported language and toolchain versions, dependency declarations, environment requirements, and verified setup procedure when they exist. Identify setup actions that install software, access the network, or modify files outside the root. Do not invent or automatically execute setup commands.
 
 ## Development Commands and Validation
 
-Run development commands from the project root in a prepared environment:
+Document actual repository-defined commands for running, building, linting, formatting, and testing as they become available. State which commands modify files, create caches, require network access, or have other side effects. Until commands are established, inspect the repository rather than guessing them.
 
-| Command | Effect |
-| --- | --- |
-| `python -m ruff check .` | Check lint; CI uses this without fixes. |
-| `python -m ruff format --check .` | Check-only counterpart to the configured formatter. |
-| `make test` or `pytest` | Run the configured `tests/` suite. |
-| `make fmt` | Reformat Python files. |
-| `make lint` | Lint with `--fix`; modifies files. |
-| `make check` | Run formatting and fixing lint; does **not** run tests. |
-| `python -m build` | Build distributions; used by the PyPI script and requires the separate `build` package. |
-| `python -m twine check dist/*` | Validate built distributions; requires the separate `twine` package. |
-| `build-lcd-dataset --help` | Show the installed CLI. |
-
-See README CLI documentation for execution. Use repository-contained paths for `DATA_DIR` and optional `PLOT_DIR`. `--offline` requires a local `ghcnh-station-list.txt` and `LCD_<station_id>_<year>.csv` files for all requested years; no observation fixtures are bundled. `--refresh` forces downloading/reprocessing; an existing output NetCDF otherwise skips reconstruction after earlier pipeline steps.
-
-`make clean` deletes caches and build artifacts. `make upload-pypi` and `make upload-anaconda` build and publish externally; do not use them as validation commands. Consult the scripts for their environment changes and cleanup behavior.
-
-The CI test suite is intentionally limited to `tests/test_test.py`, which asserts `hrrr_ml.test.add(2, 2) == 4`. Do not add further CI tests unless explicitly requested by the user. Passing this placeholder does not establish numerical, model, netCDF, or operational correctness. For behavioral changes, use relevant safe checks with small in-repository inputs and report what was actually verified. Avoid live network calls and expensive retraining as default validation. Keep temporary verification files inside the repository and report validation limits explicitly.
+The CI test suite is intentionally limited to `tests/test_main.py`, which is initially empty in a new project. Do not add further CI tests unless explicitly requested by the user. Passing this placeholder does not establish numerical, model, netCDF, or operational correctness. For behavioral changes, use relevant safe checks with small in-repository inputs and report what was actually verified. Avoid live network calls and expensive retraining as default validation. Keep temporary verification files inside the repository and report validation limits explicitly.
 
 ## Coding Conventions
 
-- Follow [.editorconfig](.editorconfig): UTF-8, LF, final newline, four-space indentation; YAML/JSON/TOML use two spaces.
-- Ruff uses a 128-character line length, preserves quote style, and enables `E`, `F`, `I`, `UP`, `B`, and `SIM`, with explicit exceptions in `pyproject.toml`. Match surrounding names, type annotations, and docstrings rather than reformatting unrelated code.
-- Preserve geospatial companion files, packaged resource paths, and both wheel package-data rules and `MANIFEST.in` source-distribution rules. `.gitattributes` assigns Git LFS to `.shp`, `.dbf`, `.shx`, and `.geojson`; an LFS pointer is not usable geometry. Read the data attribution files and [LICENSE](LICENSE) before redistributing assets.
+Follow repository configuration and established patterns in affected files. If there is no existing convention, use a consistent style appropriate to the task without introducing an unnecessary project-wide policy. Record agreed conventions here once established; avoid unrelated formatting changes.
+
+Prefer single quotes in computer code. Avoid unnecessary/excessive line breaks in code, only apply line breaks when lines are clearly too long.
+
+Follow `.editorconfig`: UTF-8, LF, final newline, four-space default indentation, two spaces for YAML/JSON/TOML, and tabs in Makefiles.
+
+### Python
+
+- Let leading and trailing doc string delimiters (''') stand on their own line.
+- Make filtering and masking explicit, and in associated code comments, state which values determine inclusion, which values are excluded, and which invalid values cause an exception.
+
+### Code documentation
+
+- When writing documentation, code comments, and docstrings, use plain, precise language that describes the actual behavior.
+- When editing documentation, preserve useful structure and detail, correct inaccuracies, and leave executable code unchanged unless requested.
+- Write the documentation for someone unfamiliar with the code. Explain what the code does, how to use it, its inputs and outputs, and relevant limitations.
+- Avoid unnecessary terminology, repetition, and implementation detail. Retain detail that helps the reader understand or use code correctly.
+- Use short, connected sentences and consistent terminology. Each sentence should add information.
+- Include implementation details only when they help the reader use the code or resolve a problem.
+- Do not add implementation or functional detail or specifics unless it is necessary for the user to understand objectives, usage, and results of a code.
+- Use the simplest accurate term. Add qualifiers only when they distinguish something meaningful. For example, prefer “loss” to “base loss” and “number” to “total number” unless the distinction is necessary.
+- Name quantities by what they represent. Distinguish errors, squared errors, sums, means, and counts. E.g., do not call an intermediate sum the loss when the returned loss is a normalized mean.
+- Explain calculations in logical order: define the quantities, describe which elements contribute, explain optional contributions, and state how the result is calculated.
+- Describe optional behavior precisely, including required parameter combinations, conditions for inclusion, and whether additional terms supplement or replace existing terms.
+- Match the implementation. Verify input requirements, return values, and exception conditions, including relevant edge cases. Do not infer behavior from existing documentation.
+- For docstrings, begin with a concise purpose statement, then explain behavior and provide structured parameter, return-value, and exception sections as appropriate.
+- Define abbreviations before using them.
 
 ## Configuration and External Interfaces
 
-- Runtime configuration is through CLI arguments and function parameters; no application environment-variable configuration is declared in the Python source.
-- `ncei.py` defines public NOAA GHCNh metadata URLs and LCDv2 CSV URLs under `https://www.ncei.noaa.gov/oa/`. Normal CLI downloads require no API token. The separate `get_period_of_record()` API uses a caller-supplied token with NOAA CDO `/cdo-web/api/v2/stations/`.
-- Downloads compare server ETags with `<filename>.etag` sidecars. HTTP helpers can retry 1,200 times with three-second delays. Threaded download exceptions are printed and omitted from returned paths; a returned list does not establish complete download success. Mock HTTP in tests instead of waiting through retries or probing live NOAA services.
-- Anaconda publishing uses `ANACONDA_API_TOKEN`, `ANACONDA_USER_NAME`, and optional `IMPORT_NAME_OVERRIDE`; consult `scripts/upload2anaconda.sh` for additional overrides. PyPI publishing prompts for `TWINE_PASSWORD` and sets `TWINE_USERNAME=__token__`. Keep credentials out of files and logs.
+Document verified configuration sources, environment-variable *names*, external interfaces, permissions, and operational dependencies as they are introduced. Never record secret values. External resources are not exempt from the project-isolation rules.
 
 ## Change and Review Workflow
 
-1. Read the affected module, its callers, and applicable repository documentation. Keep changes within the requested scope and preserve unrelated work.
-2. For behavioral changes, add focused tests under `tests/test_*.py` using `test_*` functions. Prefer small synthetic metadata/CSV inputs and mocked network responses. Exercise scientific edge cases, offline behavior, caching, and serialization when affected; keep test artifacts inside the repository.
-3. Run appropriate lint, formatting checks, and tests when the environment supports them. Review auto-fixes explicitly. Report unavailable dependencies and checks that were not run; never equate the placeholder suite passing with pipeline correctness.
-4. For packaging changes, inspect wheel/sdist data inclusion and perform a local resource-loading check when dependencies are available. Do not publish to test packaging.
-5. Review the final diff for unintended source changes, generated data, credentials, or asset churn. Update README examples and public API descriptions when behavior changes. Report behavior, validation, limitations, and any manual checks still required.
-6. **Maintain `AGENTS.md`:** When making changes that affect the project's architecture, interfaces, dependencies, workflows, conventions, or documented constraints, update the relevant sections of `AGENTS.md` in the same change. Keep revisions focused and based on verified repository contents. Do not modify `AGENTS.md` for changes that do not affect its accuracy or usefulness.
+1. Inspect the repository state, relevant implementation, callers, tests, and local documentation before making changes. Preserve unrelated and uncommitted work.
+2. Implement the requested change with minimal unrelated modifications. Preserve established behavior and interfaces unless the request explicitly changes them.
+3. Add or update focused tests and relevant documentation when behavior changes. Avoid live services and expensive workloads for routine validation unless specifically required and authorized.
+4. Run applicable, safe checks using verified project commands. If prerequisites or permissions are missing, report the limitation rather than inventing a workaround that crosses the project boundary.
+5. Review the changed files and, when Git is available, `git diff --check`, `git diff`, and `git status`. Check for accidental generated files, credentials, destructive side effects, and compatibility changes. Summarize changes, checks performed, and remaining uncertainty.
+6. **Maintain `AGENTS.md`:** When changes affect the project's architecture, interfaces, dependencies, workflows, conventions, or documented constraints, update the relevant sections of `AGENTS.md` in the same change. Keep revisions focused and based on verified repository contents. Do not modify `AGENTS.md` when its accuracy and usefulness are unaffected.
 
 ## Known Limitations and Verification Gaps
 
-These are repository observations, not confirmed runtime failures:
-
-- The only checked-in test asserts `add(2, 2) == 4`; downloading, scientific calculations, spatial selection, interpolation, CLI behavior, and NetCDF output lack checked-in regression coverage.
-- README documents `run_build(..., plot_dir=None, ...)`, but the implementation requires an explicit `plot_dir` argument; pass `None` to disable plots. README also attributes download helpers to `ncei` that actually reside in `web`.
-- README mentions `make type` and mypy settings, but no such target or mypy configuration exists. Ruff targets `py311` despite the package requiring Python >=3.12. CI specifies only Python `3.14.6`; supported-version coverage and availability of that exact interpreter need verification.
-- CI checkout does not explicitly enable Git LFS retrieval. Verify actual geometry availability before geospatial or installed-package checks.
-- Anaconda's default derived import name would be `lcd_v2_data`, while this package imports as `lcd_data`; verify/set `IMPORT_NAME_OVERRIDE=lcd_data` before an authorized release.
-- `write_utc_hourly_netcdf()` loops over characters in `'time'` when attempting attribute cleanup. Review this path and test encoding conflicts if changing serialization.
-- Live NOAA availability, upstream CSV compatibility, complete environment resolution, and end-to-end scientific correctness require validation beyond static repository inspection. Do not assume external services or installed dependencies have been verified.
+Record observed limitations, missing tests, unresolved dependencies, documentation discrepancies, and claims requiring runtime or manual verification. Clearly distinguish confirmed problems from unverified possibilities. Remove or revise entries when evidence changes.
