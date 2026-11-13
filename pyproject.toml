@@ -30,7 +30,6 @@ build-lcd-dataset = "lcd_data.build_lcd_dataset:main" # Connects name of executa
 dev = [
   "pytest>=8",
   "pytest-cov>=5",
-  "ruff>=0.5",
   "pre-commit>=3.7",
 ]
 
